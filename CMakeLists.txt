@@ -9,7 +9,14 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(CMakePackageConfigHelpers)
 include(CMakeDependentOption)
 include(CheckCCompilerFlag)
-include(GNUInstallDirs)
+if(LIBUV_NO_GNUINSTALLDIRS)
+  set(CMAKE_INSTALL_LIBDIR lib)
+  set(CMAKE_INSTALL_BINDIR bin)
+  set(CMAKE_INSTALL_INCLUDEDIR include)
+  set(CMAKE_INSTALL_DOCDIR share/doc/libuv)
+else()
+  include(GNUInstallDirs)
+endif()
 include(CTest)
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
@@ -84,6 +91,10 @@ list(APPEND uv_cflags ${lint-no-hides-param-msvc})
 list(APPEND uv_cflags ${lint-no-hides-global-msvc})
 list(APPEND uv_cflags ${lint-no-conditional-assignment-msvc})
 list(APPEND uv_cflags ${lint-no-unsafe-msvc})
+
+if (LIBUV_EXPORT_CMAKE)
+  message("-- Exporting for CMake")
+endif()
 
 set(uv_sources
     src/fs-poll.c
@@ -554,14 +565,60 @@ if(UNIX)
   install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
   install(FILES ${PROJECT_BINARY_DIR}/libuv.pc
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-  install(TARGETS uv LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-  install(TARGETS uv_a ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  if(NOT LIBUV_EXPORT_CMAKE)
+    install(TARGETS uv LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS uv_a ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  endif()
 endif()
 
 if(WIN32)
   install(DIRECTORY include/ DESTINATION include)
   install(FILES LICENSE DESTINATION .)
-  install(TARGETS uv uv_a
-          RUNTIME DESTINATION lib/$<CONFIG>
-          ARCHIVE DESTINATION lib/$<CONFIG>)
+  if(NOT LIBUV_EXPORT_CMAKE)
+    install(TARGETS uv uv_a
+            RUNTIME DESTINATION lib/$<CONFIG>
+            ARCHIVE DESTINATION lib/$<CONFIG>)
+  endif()
+endif()
+
+if(LIBUV_EXPORT_CMAKE)
+  export(TARGETS uv uv_a FILE ${CMAKE_BINARY_DIR}/libuv-targets.cmake)
+  install(
+    EXPORT libuv-targets
+    NAMESPACE libuv::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuv
+    COMPONENT dev)
+
+  install(TARGETS uv
+          EXPORT libuv-targets
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS uv_a
+          EXPORT libuv-targets
+          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+  # Generate the libuv-config.cmake for find_package()
+  file(WRITE ${CMAKE_BINARY_DIR}/libuv-config.cmake
+"# libuv-config.cmake
+# Config file for the libuv package.
+# It defines the following variables:
+#  LIBUV_INCLUDE_DIRS - include directories for libuv
+#  LIBUV_LIBRARIES    - libraries to link against
+# Dependencies
+#  - These could be added but are not required for now as all dependencies are
+#    platform specific and provided by the OS
+# find_package(Threads REQUIRED)
+if(LIBUV_CMAKE_DIR)
+  # already imported
+endif()
+# Compute paths
+get_filename_component(LIBUV_CMAKE_DIR \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)
+# Set include dir
+set(LIBUV_INCLUDE_DIRS include)
+set(LIBUV_LIBRARIES uv_a uv)
+include(\${LIBUV_CMAKE_DIR}/libuv-targets.cmake)
+")
+
+  install(FILES ${CMAKE_BINARY_DIR}/libuv-config.cmake
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/libuv
+          COMPONENT dev)
 endif()
