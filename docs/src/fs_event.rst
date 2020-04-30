@@ -19,7 +19,13 @@ the best backend for the job on each platform.
 
     See documentation_ for more details.
 
-    .. _documentation: http://www.ibm.com/developerworks/aix/library/au-aix_event_infrastructure/
+    The z/OS file system events monitoring infrastructure does not notify of file
+    creation/deletion within a directory that is being monitored.
+    See the `IBM Knowledge centre`_ for more details.
+
+    .. _documentation: https://developer.ibm.com/articles/au-aix_event_infrastructure/
+    .. _`IBM Knowledge centre`: https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.2.0/com.ibm.zos.v2r1.bpxb100/ioc.htm
+
 
 
 
@@ -66,7 +72,7 @@ Data types
             UV_FS_EVENT_WATCH_ENTRY = 1,
             /*
             * By default uv_fs_event will try to use a kernel interface such as inotify
-            * or kqueue to detect events. This may not work on remote filesystems such
+            * or kqueue to detect events. This may not work on remote file systems such
             * as NFS mounts. This flag makes fs_event fall back to calling stat() on a
             * regular interval.
             * This flag is currently not implemented yet on any backend.
@@ -74,7 +80,7 @@ Data types
             UV_FS_EVENT_STAT = 2,
             /*
             * By default, event watcher, when watching directory, is not registering
-            * (is ignoring) changes in it's subdirectories.
+            * (is ignoring) changes in its subdirectories.
             * This flag will override this behaviour on platforms that support it.
             */
             UV_FS_EVENT_RECURSIVE = 4
